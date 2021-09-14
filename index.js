@@ -6,13 +6,12 @@ const bodyParser = require('body-parser')
 // ? Constants
 const PORT = 2300
 const HOST = '0.0.0.0'
-const devTokenUrl = 'https://wsdevinternal.usaa.com/tokens/v1/access-token?party_id=plx8220&actor_id=[[1]]&realm=[[2]]'
-const consumerV1 = '/v1/pc/claims/consumer/inf/one-stop-shop/error-reprocessing'
-const reprocessorV1 = '/v1/pc/claims/oss/reprocessor'
+const consumerV1 = '/v1/consumer'
+const reprocessorV1 = '/v1/reprocessor'
 const reprocessFail = { op: 'REPLACE', path: 'status', value: 'reprocess_failed' };
 const reprocessSuccess = { op: 'REPLACE', path: 'status', value: 'success' };
-const tingtingErrorUID1 = 'ea42a78c-7051-4036-9491-6d43465cca5d'
-const tingtingErrorUID2 = 'ea42a78c-7051-4036-9491-6d43465cca5e'
+const errorUID1 = 'ea42a78c-7051-4036-9491'
+const errorUID2 = 'ty56a78c-1366-7780-6969'
 const mockEvents = require('./data/events.json')
 
 // App
@@ -57,14 +56,12 @@ app.get(`${reprocessorV1}/consumer-groups`, (req, res) => {
 })
 
 // ? GET Events
-// * https://rintapi.usaa.com/v1/pc/claims/oss/reprocessor/consumer-groups/leontest/events
 app.get(`${reprocessorV1}/consumer-groups/leontest/events`, (req, res) => {
     console.log(`GET Events ${reprocessorV1} hit`)
     res.status(200).send(mockEvents)
 })
 
 // ? POST
-// * http://0.0.0.0:2300/v1/pc/claims/consumer/inf/one-stop-shop/error-reprocessing
 app.post(`${consumerV1}`, (req, res) => {
     console.log(`POST Reprocess ${consumerV1} hit`)
     let data = {
@@ -72,13 +69,13 @@ app.post(`${consumerV1}`, (req, res) => {
         status: 'success'
     }
 
-    if (req.body.errorEventUID === tingtingErrorUID1) {
+    if (req.body.errorEventUID === errorUID1) {
         data.eventName = 'TingtingTestEvent-1'
-        data.eventUID = tingtingErrorUID1
+        data.eventUID = errorUID1
         res.status(200)
-    } else if (req.body.errorEventUID === tingtingErrorUID2) {
+    } else if (req.body.errorEventUID === errorUID2) {
         data.eventName = 'TingtingTestEvent-2'
-        data.eventUID = tingtingErrorUID2
+        data.eventUID = errorUID2
         res.status(500)
     }
 
@@ -87,12 +84,11 @@ app.post(`${consumerV1}`, (req, res) => {
 
 // ? PATCH
 // * Happy Path: Patch tingting 1
-// * http://0.0.0.0:2300/v1/pc/claims/oss/reprocessor/consumer-groups/leontest/events/ea42a78c-7051-4036-9491-6d43465cca5d
-app.patch(`${reprocessorV1}/consumer-groups/leontest/events/${tingtingErrorUID1}/`, (req, res) => {
+app.patch(`${reprocessorV1}/consumer-groups/leontest/events/${errorUID1}/`, (req, res) => {
     req.body.payload = reprocessSuccess
     res.status(200)
     res.send({
-        eventUID: tingtingErrorUID1,
+        eventUID: errorUID1,
         eventName: 'TingtingTestEvent-1',
         groupName: 'leontest',
         status: 'success'
@@ -100,12 +96,12 @@ app.patch(`${reprocessorV1}/consumer-groups/leontest/events/${tingtingErrorUID1}
 })
 
 // ? PATCH
-// ! Sad Path: Patch tingting 2
-app.patch(`${reprocessorV1}/consumer-groups/leontest/events/${tingtingErrorUID2}/`, (req, res) => {
+// ! Sad Path
+app.patch(`${reprocessorV1}/consumer-groups/leontest/events/${errorUID2}/`, (req, res) => {
     req.body.payload = reprocessFail
     res.status(200)
     res.send({
-        eventUID: tingtingErrorUID2,
+        eventUID: errorUID2,
         eventName: 'TingtingTestEvent-2',
         groupName: 'leontest',
         status: 'reprocess failed'
@@ -119,7 +115,6 @@ axios({
     method: req.method,
     data: req.body,
     headers: {
-        "usaa-activity": "LEVEL2",
         "Content-Type": "application/json"
         }
     })
